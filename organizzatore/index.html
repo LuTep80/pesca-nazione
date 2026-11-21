@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Pesca la nazione organizzatore</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* layout: una scheda, elenco di codici personali */
+  --bg:#e9efe9; --paper:#fbfcfa; --ink:#14251c; --muted:#53655a; --line:#cbd8ce;
+  --pine:#1f4d36; --berry:#b3262e; --berry-ink:#ffffff; --gold:#b98a1d;
+  --font-display:'Fraunces',Georgia,serif; --font-body:'DM Sans',system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1a14; --paper:#17261d; --ink:#e8f0ea; --muted:#9bb0a2; --line:#2b4034;
+    --pine:#7fc29b; --berry:#e0525a; --berry-ink:#1a0a0b; --gold:#e0b84e; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1a14; --paper:#17261d; --ink:#e8f0ea; --muted:#9bb0a2; --line:#2b4034;
+  --pine:#7fc29b; --berry:#e0525a; --berry-ink:#1a0a0b; --gold:#e0b84e; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:400 17px/1.5 var(--font-body);min-height:100%;padding:24px 16px 56px}
+main{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1{font:800 clamp(2rem,7vw,3rem)/1.05 var(--font-display);margin:0;color:var(--pine);text-wrap:balance}
+p{margin:0}
+.lead{color:var(--muted);max-width:60ch}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px}
+label{font-weight:700;font-size:.95rem}
+.hint{color:var(--muted);font-size:.9rem}
+textarea{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;resize:vertical;min-height:140px}
+textarea.small{min-height:76px;word-break:break-all}
+button{font:700 1rem var(--font-body);border-radius:10px;border:1px solid var(--line);background:var(--paper);color:var(--ink);padding:12px 16px;cursor:pointer;min-height:48px}
+button:hover{border-color:var(--pine)}
+button:focus-visible,textarea:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+button.primary{background:var(--berry);border-color:var(--berry);color:var(--berry-ink)}
+button.primary:hover{filter:brightness(1.08)}
+.err{color:var(--berry);font-weight:700;min-height:1.4em}
+.hidden{display:none}
+.k{font-size:.8rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.sendlist{display:flex;flex-direction:column;gap:8px}
+.send{display:flex;gap:10px;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:8px}
+@media (prefers-reduced-motion:no-preference){button{transition:filter .15s,border-color .15s}}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Organizzatore</h1>
+    <p class="lead">Crea un codice personale per ogni partecipante. Ogni codice contiene solo il nome e un gruppo di nazioni candidate. Le nazioni non sono mostrate qui e non vengono salvate da nessuna parte.</p>
+  </header>
+
+  <section class="card">
+    <div>
+      <label for="names">Un nome per riga (minimo 3)</label>
+      <textarea id="names" placeholder="Anna&#10;Marco&#10;Giulia&#10;Nonna Rosa"></textarea>
+    </div>
+    <div>
+      <label for="cexcl">Nazioni da non assegnare a una persona (facoltativo)</label>
+      <p class="hint">Una riga per persona, nel formato Anna: Giappone, Stati Uniti. Nomi italiani delle nazioni.</p>
+      <textarea id="cexcl" class="small" placeholder="Anna: Giappone, Stati Uniti&#10;Marco: Brasile"></textarea>
+    </div>
+    <p id="err" class="err" role="alert"></p>
+    <button id="mk" class="primary" type="button">Crea i codici</button>
+
+    <div id="outwrap" class="hidden">
+      <p class="k">Un codice per persona</p>
+      <p class="hint" style="margin:4px 0 10px">Invia a ciascuno solo il proprio codice, in privato. Se ricrei i codici, quelli vecchi non vanno più usati.</p>
+      <div id="codes" class="sendlist"></div>
+      <textarea id="fallback" class="small hidden" readonly aria-label="Codice da copiare"></textarea>
+    </div>
+  </section>
+</main>
+
+<script>
+const COUNTRIES = ["Afghanistan","Albania","Algeria","Andorra","Angola","Antigua e Barbuda","Arabia Saudita","Argentina","Armenia","Australia","Austria","Azerbaigian","Bahamas","Bahrein","Bangladesh","Barbados","Belgio","Belize","Benin","Bhutan","Bielorussia","Bolivia","Bosnia ed Erzegovina","Botswana","Brasile","Brunei","Bulgaria","Burkina Faso","Burundi","Cambogia","Camerun","Canada","Capo Verde","Ciad","Cile","Cina","Cipro","Colombia","Comore","Corea del Nord","Corea del Sud","Costa d'Avorio","Costa Rica","Croazia","Cuba","Danimarca","Dominica","Ecuador","Egitto","El Salvador","Emirati Arabi Uniti","Eritrea","Estonia","Eswatini","Etiopia","Figi","Filippine","Finlandia","Francia","Gabon","Gambia","Georgia","Germania","Ghana","Giamaica","Giappone","Gibuti","Giordania","Grecia","Grenada","Guatemala","Guinea","Guinea-Bissau","Guinea Equatoriale","Guyana","Haiti","Honduras","India","Indonesia","Iran","Iraq","Irlanda","Islanda","Isole Marshall","Isole Salomone","Israele","Italia","Kazakistan","Kenya","Kirghizistan","Kiribati","Kuwait","Laos","Lesotho","Lettonia","Libano","Liberia","Libia","Liechtenstein","Lituania","Lussemburgo","Macedonia del Nord","Madagascar","Malawi","Maldive","Malesia","Mali","Malta","Marocco","Mauritania","Mauritius","Messico","Micronesia","Moldavia","Monaco","Mongolia","Montenegro","Mozambico","Myanmar","Namibia","Nauru","Nepal","Nicaragua","Niger","Nigeria","Norvegia","Nuova Zelanda","Oman","Paesi Bassi","Pakistan","Palau","Panama","Papua Nuova Guinea","Paraguay","Perù","Polonia","Portogallo","Qatar","Regno Unito","Repubblica Ceca","Repubblica Centrafricana","Repubblica del Congo","Repubblica Democratica del Congo","Repubblica Dominicana","Romania","Ruanda","Russia","Saint Kitts e Nevis","Saint Lucia","Saint Vincent e Grenadine","Samoa","San Marino","São Tomé e Príncipe","Senegal","Serbia","Seychelles","Sierra Leone","Singapore","Siria","Slovacchia","Slovenia","Somalia","Spagna","Sri Lanka","Stati Uniti","Sudafrica","Sudan","Sudan del Sud","Suriname","Svezia","Svizzera","Tagikistan","Tailandia","Tanzania","Timor Est","Togo","Tonga","Trinidad e Tobago","Tunisia","Turchia","Turkmenistan","Tuvalu","Ucraina","Uganda","Ungheria","Uruguay","Uzbekistan","Vanuatu","Venezuela","Vietnam","Yemen","Zambia","Zimbabwe"];
+const $ = id => document.getElementById(id);
+const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+const cmap = new Map(COUNTRIES.map((c, i) => [norm(c), i]));
+
+function rnd(n){
+  const a = new Uint32Array(1), lim = Math.floor(4294967296 / n) * n;
+  do { crypto.getRandomValues(a); } while (a[0] >= lim);
+  return a[0] % n;
+}
+function shuffle(arr){ for (let i = arr.length - 1; i > 0; i--){ const j = rnd(i + 1); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
+function check(body){ let h = 0; for (const v of body) h = (h * 31 + v + 1) % 65521; return h; }
+function encode(name, block){
+  const nb = new TextEncoder().encode(name);
+  const body = [nb.length, ...nb, block.length, ...block];
+  const c = check(body), all = [...body, c >> 8, c & 255];
+  return 'SS2-' + btoa(String.fromCharCode(...all)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+$('mk').addEventListener('click', () => {
+  const err = $('err'); err.textContent = ''; $('outwrap').classList.add('hidden');
+  const names = $('names').value.split('\n').map(s => s.trim()).filter(Boolean);
+  if (names.length < 3){ err.textContent = 'Servono almeno 3 partecipanti.'; return; }
+  if (names.length > 150){ err.textContent = 'Troppi partecipanti: il massimo è 150.'; return; }
+  if (names.some(n => new TextEncoder().encode(n).length > 60)){ err.textContent = 'Un nome è troppo lungo. Massimo 60 caratteri.'; return; }
+  const low = names.map(n => n.toLowerCase());
+  if (new Set(low).size !== names.length){ err.textContent = 'Ci sono nomi duplicati. Aggiungi un cognome o un’iniziale.'; return; }
+  const ban = names.map(() => new Set());
+  for (const ln of $('cexcl').value.split('\n').map(s => s.trim()).filter(Boolean)){
+    const k = ln.indexOf(':');
+    if (k < 0){ err.textContent = 'Riga non valida: "' + ln + '". Usa il formato Anna: Giappone, Cina.'; return; }
+    const p = low.indexOf(ln.slice(0, k).trim().toLowerCase());
+    if (p < 0){ err.textContent = 'Nome non presente nell’elenco: "' + ln.slice(0, k).trim() + '".'; return; }
+    for (const raw of ln.slice(k + 1).split(',')){
+      if (!raw.trim()) continue;
+      const c = cmap.get(norm(raw));
+      if (c === undefined){ err.textContent = 'Nazione non riconosciuta: "' + raw.trim() + '". Usa il nome italiano, ad esempio Stati Uniti.'; return; }
+      ban[p].add(c);
+    }
+  }
+  const deck = shuffle(COUNTRIES.map((_, i) => i));
+  const N = names.length, list = $('codes'); list.replaceChildren();
+  for (let i = 0; i < N; i++){
+    const block = deck.filter((_, k) => k % N === i && !ban[i].has(deck[k]));
+    if (!block.length){ err.textContent = 'Le esclusioni lasciano ' + names[i] + ' senza nazioni disponibili.'; list.replaceChildren(); return; }
+    const code = encode(names[i], block);
+    const row = document.createElement('div'); row.className = 'send';
+    const s = document.createElement('span'); s.textContent = names[i];
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = 'Copia codice';
+    b.addEventListener('click', async () => {
+      const fb = $('fallback');
+      try { await navigator.clipboard.writeText(code); fb.classList.add('hidden'); b.textContent = 'Copiato'; setTimeout(() => b.textContent = 'Copia codice', 1500); }
+      catch(e){ fb.value = code; fb.classList.remove('hidden'); fb.focus(); fb.select(); }
+    });
+    row.append(s, b); list.appendChild(row);
+  }
+  $('outwrap').classList.remove('hidden');
+});
+</script>
+</body>
+</html>
