@@ -49,6 +49,9 @@ button.primary:hover{filter:brightness(1.08)}
 .row{display:flex;flex-wrap:wrap;gap:10px}
 .hidden{display:none}
 .reveal{border:2px dashed var(--line);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px}
+.who{font:800 1.8rem/1.1 var(--font-display);color:var(--pine)}
+.sendlist{display:flex;flex-direction:column;gap:8px}
+.send{display:flex;gap:10px;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:8px}
 .reveal .nation{font:800 clamp(1.8rem,8vw,2.6rem)/1.1 var(--font-display);color:var(--berry)}
 .k{font-size:.8rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 @media (prefers-reduced-motion:no-preference){button{transition:filter .15s,border-color .15s}}
@@ -75,24 +78,25 @@ button.primary:hover{filter:brightness(1.08)}
     <p id="oerr" class="err" role="alert"></p>
     <button id="mk" class="primary" type="button">Crea codice</button>
     <div id="outwrap" class="hidden">
-      <label for="out">Codice da inviare a tutti i partecipanti</label>
-      <textarea id="out" class="small" readonly></textarea>
-      <div class="row" style="margin-top:10px"><button id="cp" type="button">Copia codice</button></div>
-      <p class="hint" style="margin-top:8px">Il codice contiene solo nomi ed esclusioni. Non rivela nessuna estrazione.</p>
+      <p class="k">Un codice per persona</p>
+      <p class="hint" style="margin:4px 0 10px">Invia a ciascuno solo il proprio codice, in privato. Il codice contiene nomi ed esclusioni e non rivela nessuna estrazione.</p>
+      <div id="codes" class="sendlist"></div>
+      <textarea id="fallback" class="small hidden" readonly aria-label="Codice da copiare"></textarea>
     </div>
   </section>
 
   <section class="card" aria-labelledby="h-p">
     <h2 id="h-p">2. Partecipante: scopri la tua nazione</h2>
     <div>
-      <label for="code">Incolla il codice ricevuto</label>
+      <label for="code">Incolla il tuo codice personale</label>
       <textarea id="code" class="small"></textarea>
     </div>
     <button id="load" type="button">Carica</button>
     <div id="pbox" class="hidden" style="display:none;flex-direction:column;gap:14px">
       <div>
-        <label for="me">Il tuo nome</label>
-        <select id="me"></select>
+        <p class="k">Codice di</p>
+        <p class="who" id="who"></p>
+        <p class="hint">Se non è il tuo nome, non proseguire e chiedi il codice giusto a chi organizza.</p>
       </div>
       <div>
         <label for="pw">La tua parola segreta</label>
@@ -140,7 +144,7 @@ function encode(obj){ return 'SS1:' + btoa(unescape(encodeURIComponent(JSON.stri
 function decode(s){
   s = s.trim(); if (!s.startsWith('SS1:')) throw 0;
   const o = JSON.parse(decodeURIComponent(escape(atob(s.slice(4)))));
-  if (!Array.isArray(o.n) || o.n.length < 3 || typeof o.x !== 'object') throw 0;
+  if (!Array.isArray(o.n) || o.n.length < 3 || typeof o.x !== 'object' || !Number.isInteger(o.i) || o.i < 0 || o.i >= o.n.length) throw 0;
   return o;
 }
 // blocchi disgiunti: la nazione k del mazzo mescolato va alla persona k mod N
@@ -178,11 +182,20 @@ $('mk').addEventListener('click', () => {
   for (let i = 0; i < names.length; i++){
     if (!blockFor(cfg, i).length){ err.textContent = 'Le esclusioni lasciano ' + names[i] + ' senza nazioni disponibili.'; return; }
   }
-  $('out').value = encode(cfg); $('outwrap').classList.remove('hidden');
-});
-$('cp').addEventListener('click', async () => {
-  try { await navigator.clipboard.writeText($('out').value); $('cp').textContent = 'Copiato'; setTimeout(() => $('cp').textContent = 'Copia codice', 1500); }
-  catch(e){ $('out').focus(); $('out').select(); }
+  const list = $('codes'); list.replaceChildren();
+  names.forEach((n, i) => {
+    const code = encode({ n: names, x, i });
+    const row = document.createElement('div'); row.className = 'send';
+    const s = document.createElement('span'); s.textContent = n;
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = 'Copia codice';
+    b.addEventListener('click', async () => {
+      const fb = $('fallback');
+      try { await navigator.clipboard.writeText(code); fb.classList.add('hidden'); b.textContent = 'Copiato'; setTimeout(() => b.textContent = 'Copia codice', 1500); }
+      catch(e){ fb.value = code; fb.classList.remove('hidden'); fb.focus(); fb.select(); }
+    });
+    row.append(s, b); list.appendChild(row);
+  });
+  $('outwrap').classList.remove('hidden');
 });
 
 let cfg = null;
@@ -190,15 +203,14 @@ $('load').addEventListener('click', () => {
   const err = $('perr'); err.textContent = ''; hideRev();
   try { cfg = decode($('code').value); }
   catch(e){ cfg = null; $('pbox').style.display = 'none'; err.textContent = 'Codice non valido. Incollalo per intero, a partire da SS1:.'; return; }
-  const sel = $('me'); sel.replaceChildren();
-  cfg.n.forEach((n, i) => { const o = document.createElement('option'); o.value = i; o.textContent = n; sel.appendChild(o); });
+  $('who').textContent = cfg.n[cfg.i];
   $('pbox').style.display = 'flex';
 });
 $('draw').addEventListener('click', () => {
   const err = $('perr'); err.textContent = '';
   const pw = $('pw').value;
   if (norm(pw).length < 3){ err.textContent = 'La parola segreta deve avere almeno 3 caratteri.'; return; }
-  const i = +$('me').value;
+  const i = cfg.i;
   $('rev-for').textContent = 'Per ' + cfg.n[i];
   $('rev-nation').textContent = pick(cfg, i, pw);
   $('rev').classList.remove('hidden');
