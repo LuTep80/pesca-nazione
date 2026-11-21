@@ -3,13 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
 <title>Pesca la nazione</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  /* layout: una sola scheda, codice personale e parola segreta */
+  /* layout: una scheda al centro; la nazione scorre come in una slot e si ferma sulla bandiera */
   --bg:#e9efe9; --paper:#fbfcfa; --ink:#14251c; --muted:#53655a; --line:#cbd8ce;
   --pine:#1f4d36; --berry:#b3262e; --berry-ink:#ffffff; --gold:#b98a1d;
   --font-display:'Fraunces',Georgia,serif; --font-body:'DM Sans',system-ui,sans-serif;
@@ -34,53 +35,63 @@ p{margin:0}
 .lead{color:var(--muted);max-width:60ch}
 .card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px}
 label{font-weight:700;font-size:.95rem}
-.hint{color:var(--muted);font-size:.9rem}
-textarea,input{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px}
-textarea{resize:vertical;min-height:84px;word-break:break-all}
-input{min-height:48px}
+textarea{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;resize:vertical;min-height:84px;word-break:break-all}
 button{font:700 1rem var(--font-body);border-radius:10px;border:1px solid var(--line);background:var(--paper);color:var(--ink);padding:12px 16px;cursor:pointer;min-height:48px}
 button:hover{border-color:var(--pine)}
-button:focus-visible,textarea:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+button:focus-visible,textarea:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 button.primary{background:var(--berry);border-color:var(--berry);color:var(--berry-ink)}
 button.primary:hover{filter:brightness(1.08)}
 .err{color:var(--berry);font-weight:700;min-height:1.4em}
 .row{display:flex;flex-wrap:wrap;gap:10px}
 .hidden{display:none}
-.reveal{border:2px dashed var(--line);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px}
-.reveal .nation{font:800 clamp(1.8rem,8vw,2.6rem)/1.1 var(--font-display);color:var(--berry)}
-.who{font:800 1.8rem/1.1 var(--font-display);color:var(--pine)}
 .k{font-size:.8rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-@media (prefers-reduced-motion:no-preference){button{transition:filter .15s,border-color .15s}}
+.stage{align-items:center;text-align:center;padding:28px 20px}
+.hello{font:600 1.5rem/1.2 var(--font-display);color:var(--pine)}
+.reel{font:800 clamp(1.9rem,8vw,2.8rem)/1.1 var(--font-display);color:var(--ink);min-height:2.4em;display:flex;align-items:center;justify-content:center;text-wrap:balance;width:100%;border-top:2px solid var(--line);border-bottom:2px solid var(--line);padding:6px 0}
+.reel.landed{color:var(--berry);border-color:var(--berry)}
+.flagbox{display:flex;justify-content:center;min-height:120px;align-items:center}
+.flagbox img{width:min(240px,70vw);height:auto;border-radius:8px;border:1px solid var(--line);box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.flagbox .emoji{font-size:6rem;line-height:1}
+@media (prefers-reduced-motion:no-preference){
+  button{transition:filter .15s,border-color .15s}
+  .reel.landed{animation:land .6s cubic-bezier(.2,1.4,.4,1)}
+  .flagbox.pop{animation:pop .7s cubic-bezier(.2,1.4,.4,1)}
+  @keyframes land{from{transform:scale(.8)}to{transform:scale(1)}}
+  @keyframes pop{from{transform:scale(.3) rotate(-8deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
+}
 </style>
 </head>
 <body>
 <main>
   <header>
     <h1>Pesca la nazione</h1>
-    <p class="lead">Incolla il codice personale che hai ricevuto e scopri la tua nazione. Il risultato è fisso: lo stesso codice dà sempre la stessa nazione, su qualsiasi dispositivo.</p>
+    <p class="lead" id="lead">Apri il link personale che hai ricevuto per scoprire la tua nazione. Il risultato è fisso: lo stesso link dà sempre la stessa nazione.</p>
   </header>
 
-  <section class="card">
+  <section id="paste" class="card hidden">
     <div>
-      <label for="code">Il tuo codice</label>
+      <label for="code">Il tuo link o codice</label>
       <textarea id="code" autocomplete="off" spellcheck="false" placeholder="SS3-..."></textarea>
     </div>
     <button id="draw" class="primary" type="button">Scopri la mia nazione</button>
     <p id="perr" class="err" role="alert"></p>
+  </section>
 
-    <div id="rev" class="reveal hidden" aria-live="polite">
-      <p class="k" id="rev-for"></p>
-      <p class="k">Nazione estratta</p>
-      <p class="nation" id="rev-nation"></p>
-      <div class="row"><button id="hide" type="button">Nascondi</button></div>
+  <section id="stage" class="card stage hidden" aria-live="polite">
+    <p class="hello" id="hello"></p>
+    <p class="k" id="lbl">Estrazione in corso</p>
+    <div id="reel" class="reel"></div>
+    <div id="flagbox" class="flagbox hidden"></div>
+    <div class="row" id="after" style="justify-content:center">
+      <button id="again" type="button">Rivedi l'animazione</button>
     </div>
   </section>
 </main>
 
 <script>
 const COUNTRIES = ["Afghanistan","Albania","Algeria","Andorra","Angola","Antigua e Barbuda","Arabia Saudita","Argentina","Armenia","Australia","Austria","Azerbaigian","Bahamas","Bahrein","Bangladesh","Barbados","Belgio","Belize","Benin","Bhutan","Bielorussia","Bolivia","Bosnia ed Erzegovina","Botswana","Brasile","Brunei","Bulgaria","Burkina Faso","Burundi","Cambogia","Camerun","Canada","Capo Verde","Ciad","Cile","Cina","Cipro","Colombia","Comore","Corea del Nord","Corea del Sud","Costa d'Avorio","Costa Rica","Croazia","Cuba","Danimarca","Dominica","Ecuador","Egitto","El Salvador","Emirati Arabi Uniti","Eritrea","Estonia","Eswatini","Etiopia","Figi","Filippine","Finlandia","Francia","Gabon","Gambia","Georgia","Germania","Ghana","Giamaica","Giappone","Gibuti","Giordania","Grecia","Grenada","Guatemala","Guinea","Guinea-Bissau","Guinea Equatoriale","Guyana","Haiti","Honduras","India","Indonesia","Iran","Iraq","Irlanda","Islanda","Isole Marshall","Isole Salomone","Israele","Italia","Kazakistan","Kenya","Kirghizistan","Kiribati","Kuwait","Laos","Lesotho","Lettonia","Libano","Liberia","Libia","Liechtenstein","Lituania","Lussemburgo","Macedonia del Nord","Madagascar","Malawi","Maldive","Malesia","Mali","Malta","Marocco","Mauritania","Mauritius","Messico","Micronesia","Moldavia","Monaco","Mongolia","Montenegro","Mozambico","Myanmar","Namibia","Nauru","Nepal","Nicaragua","Niger","Nigeria","Norvegia","Nuova Zelanda","Oman","Paesi Bassi","Pakistan","Palau","Panama","Papua Nuova Guinea","Paraguay","Perù","Polonia","Portogallo","Qatar","Regno Unito","Repubblica Ceca","Repubblica Centrafricana","Repubblica del Congo","Repubblica Democratica del Congo","Repubblica Dominicana","Romania","Ruanda","Russia","Saint Kitts e Nevis","Saint Lucia","Saint Vincent e Grenadine","Samoa","San Marino","São Tomé e Príncipe","Senegal","Serbia","Seychelles","Sierra Leone","Singapore","Siria","Slovacchia","Slovenia","Somalia","Spagna","Sri Lanka","Stati Uniti","Sudafrica","Sudan","Sudan del Sud","Suriname","Svezia","Svizzera","Tagikistan","Tailandia","Tanzania","Timor Est","Togo","Tonga","Trinidad e Tobago","Tunisia","Turchia","Turkmenistan","Tuvalu","Ucraina","Uganda","Ungheria","Uruguay","Uzbekistan","Vanuatu","Venezuela","Vietnam","Yemen","Zambia","Zimbabwe"];
+const ISO = ["af","al","dz","ad","ao","ag","sa","ar","am","au","at","az","bs","bh","bd","bb","be","bz","bj","bt","by","bo","ba","bw","br","bn","bg","bf","bi","kh","cm","ca","cv","td","cl","cn","cy","co","km","kp","kr","ci","cr","hr","cu","dk","dm","ec","eg","sv","ae","er","ee","sz","et","fj","ph","fi","fr","ga","gm","ge","de","gh","jm","jp","dj","jo","gr","gd","gt","gn","gw","gq","gy","ht","hn","in","id","ir","iq","ie","is","mh","sb","il","it","kz","ke","kg","ki","kw","la","ls","lv","lb","lr","ly","li","lt","lu","mk","mg","mw","mv","my","ml","mt","ma","mr","mu","mx","fm","md","mc","mn","me","mz","mm","na","nr","np","ni","ne","ng","no","nz","om","nl","pk","pw","pa","pg","py","pe","pl","pt","qa","gb","cz","cf","cg","cd","do","ro","rw","ru","kn","lc","vc","ws","sm","st","sn","rs","sc","sl","sg","sy","sk","si","so","es","lk","us","za","sd","ss","sr","se","ch","tj","th","tz","tl","tg","to","tt","tn","tr","tm","tv","ua","ug","hu","uy","uz","vu","ve","vn","ye","zm","zw"];
 const $ = id => document.getElementById(id);
-const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 
 function hash(str){ // cyrb53
   let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
@@ -93,10 +104,10 @@ function hash(str){ // cyrb53
   return 4294967296 * (2097151 & h2) + (h1 >>> 0);
 }
 function check(body){ let h = 0; for (const v of body) h = (h * 31 + v + 1) % 65521; return h; }
-function decode(s){
-  s = s.replace(/\s+/g, '');
-  if (!s.startsWith('SS3-')) throw 0;
-  let b = s.slice(4).replace(/-/g, '+').replace(/_/g, '/');
+function decode(text){
+  const m = /SS3-[A-Za-z0-9_-]+/.exec(text || '');
+  if (!m) throw 0;
+  let b = m[0].slice(4).replace(/-/g, '+').replace(/_/g, '/');
   while (b.length % 4) b += '=';
   const u = Uint8Array.from(atob(b), c => c.charCodeAt(0));
   if (u.length < 5) throw 0;
@@ -107,19 +118,57 @@ function decode(s){
   const name = new TextDecoder().decode(body.slice(1, 1 + nl));
   const idx = body[1 + nl] ^ (hash(name) & 255);
   if (idx >= COUNTRIES.length) throw 0;
-  return { name, country: COUNTRIES[idx] };
+  return { name, idx };
 }
-function hideRev(){ $('rev').classList.add('hidden'); $('rev-nation').textContent = ''; $('rev-for').textContent = ''; }
-$('draw').addEventListener('click', () => {
-  const err = $('perr'); err.textContent = ''; hideRev();
+
+let timer = null, current = null;
+function emojiFlag(iso){ return String.fromCodePoint(...[...iso.toUpperCase()].map(ch => 127397 + ch.charCodeAt(0))); }
+
+function land(c){
+  const reel = $('reel'), box = $('flagbox'), name = COUNTRIES[c.idx], iso = ISO[c.idx];
+  reel.textContent = name; reel.classList.add('landed');
+  $('lbl').textContent = 'La tua nazione';
+  box.replaceChildren();
+  const img = document.createElement('img');
+  img.alt = 'Bandiera: ' + name; img.src = 'https://flagcdn.com/w320/' + iso + '.png';
+  img.addEventListener('error', () => {
+    const e = document.createElement('span'); e.className = 'emoji'; e.textContent = emojiFlag(iso); e.setAttribute('role', 'img'); e.setAttribute('aria-label', 'Bandiera: ' + name);
+    box.replaceChildren(e);
+  });
+  box.appendChild(img);
+  box.classList.remove('hidden'); box.classList.add('pop');
+  $('after').classList.remove('hidden');
+}
+function play(c){
+  clearTimeout(timer); current = c;
+  $('paste').classList.add('hidden'); $('lead').classList.add('hidden');
+  $('stage').classList.remove('hidden');
+  $('hello').textContent = 'Ciao ' + c.name + '!';
+  $('lbl').textContent = 'Estrazione in corso';
+  const reel = $('reel'), box = $('flagbox');
+  reel.classList.remove('landed'); box.classList.add('hidden'); box.classList.remove('pop'); box.replaceChildren();
+  $('after').classList.add('hidden');
+  const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduce){ land(c); return; }
+  const steps = 34; let i = 0;
+  const tick = () => {
+    if (i >= steps){ land(c); return; }
+    reel.textContent = COUNTRIES[Math.floor(Math.random() * COUNTRIES.length)];
+    i++; timer = setTimeout(tick, 45 + Math.pow(i / steps, 3) * 420);
+  };
+  tick();
+}
+function fromText(text){
+  const err = $('perr'); err.textContent = '';
   let c;
-  try { c = decode($('code').value); }
-  catch(e){ err.textContent = 'Codice non valido. Incollalo per intero, a partire da SS3-.'; return; }
-  $('rev-for').textContent = 'Per ' + c.name;
-  $('rev-nation').textContent = c.country;
-  $('rev').classList.remove('hidden');
-});
-$('hide').addEventListener('click', hideRev);
+  try { c = decode(text); }
+  catch(e){ $('paste').classList.remove('hidden'); err.textContent = 'Link o codice non valido. Copialo per intero, a partire da SS3-.'; return false; }
+  play(c); return true;
+}
+$('draw').addEventListener('click', () => fromText($('code').value));
+$('again').addEventListener('click', () => { if (current) play(current); });
+window.addEventListener('hashchange', () => { if (location.hash.length > 1) fromText(location.hash); });
+if (location.hash.length > 1) fromText(location.hash); else $('paste').classList.remove('hidden');
 </script>
 </body>
 </html>

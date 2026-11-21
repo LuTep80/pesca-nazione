@@ -43,6 +43,10 @@ button:hover{border-color:var(--pine)}
 button:focus-visible,textarea:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 button.primary{background:var(--berry);border-color:var(--berry);color:var(--berry-ink)}
 button.primary:hover{filter:brightness(1.08)}
+.btnlink{font:700 1rem var(--font-body);border-radius:10px;border:1px solid var(--line);background:var(--paper);color:var(--ink);padding:12px 16px;min-height:48px;display:inline-flex;align-items:center;text-decoration:none}
+.btnlink:hover{border-color:var(--pine)}
+.btnlink:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:10px}
 .err{color:var(--berry);font-weight:700;min-height:1.4em}
 .hidden{display:none}
 .k{font-size:.8rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
@@ -55,7 +59,7 @@ button.primary:hover{filter:brightness(1.08)}
 <main>
   <header>
     <h1>Organizzatore</h1>
-    <p class="lead">Crea un codice personale per ogni partecipante. L’estrazione avviene una sola volta, ora: ogni codice contiene già il risultato di quella persona. Le nazioni non sono mostrate qui e non vengono salvate da nessuna parte.</p>
+    <p class="lead">Crea un link personale per ogni partecipante. L’estrazione avviene una sola volta, ora: ogni link contiene già il risultato di quella persona. Le nazioni non sono mostrate qui e non vengono salvate da nessuna parte.</p>
   </header>
 
   <section class="card">
@@ -69,13 +73,13 @@ button.primary:hover{filter:brightness(1.08)}
       <textarea id="cexcl" class="small" placeholder="Anna: Giappone, Stati Uniti&#10;Marco: Brasile"></textarea>
     </div>
     <p id="err" class="err" role="alert"></p>
-    <button id="mk" class="primary" type="button">Crea i codici</button>
+    <button id="mk" class="primary" type="button">Crea i link</button>
 
     <div id="outwrap" class="hidden">
-      <p class="k">Un codice per persona</p>
-      <p class="hint" style="margin:4px 0 10px">Invia a ciascuno solo il proprio codice, in privato. Crea i codici una volta sola: ogni nuova creazione è una nuova estrazione e rende non validi i codici precedenti.</p>
+      <p class="k">Un link per persona</p>
+      <p class="hint" style="margin:4px 0 10px">Invia a ciascuno solo il proprio link, in privato. Crea i link una volta sola: ogni nuova creazione è una nuova estrazione e rende non validi i link precedenti.</p>
       <div id="codes" class="sendlist"></div>
-      <textarea id="fallback" class="small hidden" readonly aria-label="Codice da copiare"></textarea>
+      <textarea id="fallback" class="small hidden" readonly aria-label="Link da copiare"></textarea>
     </div>
   </section>
 </main>
@@ -131,6 +135,7 @@ $('mk').addEventListener('click', () => {
       ban[p].add(c);
     }
   }
+  const base = location.origin + location.pathname.replace(/organizzatore\/?(index\.html)?$/, '');
   const N = names.length, list = $('codes'); list.replaceChildren();
   const used = new Set(), codes = [];
   for (let i = 0; i < N; i++){
@@ -140,15 +145,20 @@ $('mk').addEventListener('click', () => {
   }
   for (let i = 0; i < N; i++){
     const code = codes[i];
+    const url = base + '#' + code;
     const row = document.createElement('div'); row.className = 'send';
     const s = document.createElement('span'); s.textContent = names[i];
-    const b = document.createElement('button'); b.type = 'button'; b.textContent = 'Copia codice';
+    const act = document.createElement('span'); act.className = 'row';
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = 'Copia link';
     b.addEventListener('click', async () => {
       const fb = $('fallback');
-      try { await navigator.clipboard.writeText(code); fb.classList.add('hidden'); b.textContent = 'Copiato'; setTimeout(() => b.textContent = 'Copia codice', 1500); }
-      catch(e){ fb.value = code; fb.classList.remove('hidden'); fb.focus(); fb.select(); }
+      try { await navigator.clipboard.writeText(url); fb.classList.add('hidden'); b.textContent = 'Copiato'; setTimeout(() => b.textContent = 'Copia link', 1500); }
+      catch(e){ fb.value = url; fb.classList.remove('hidden'); fb.focus(); fb.select(); }
     });
-    row.append(s, b); list.appendChild(row);
+    const w = document.createElement('a'); w.className = 'btnlink'; w.textContent = 'WhatsApp'; w.target = '_blank'; w.rel = 'noopener';
+    w.href = 'https://wa.me/?text=' + encodeURIComponent('Ciao ' + names[i] + '! Apri questo link per scoprire la tua nazione del Secret Santa. Il link è personale, non condividerlo: ' + url);
+    act.append(b, w);
+    row.append(s, act); list.appendChild(row);
   }
   $('outwrap').classList.remove('hidden');
 });
