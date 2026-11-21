@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pesca la nazione</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* layout: colonna singola, due schede (organizzatore, partecipante) */
+  --bg:#e9efe9; --paper:#fbfcfa; --ink:#14251c; --muted:#53655a; --line:#cbd8ce;
+  --pine:#1f4d36; --berry:#b3262e; --berry-ink:#ffffff; --gold:#b98a1d;
+  --font-display:'Fraunces',Georgia,serif; --font-body:'DM Sans',system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1a14; --paper:#17261d; --ink:#e8f0ea; --muted:#9bb0a2; --line:#2b4034;
+    --pine:#7fc29b; --berry:#e0525a; --berry-ink:#1a0a0b; --gold:#e0b84e; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1a14; --paper:#17261d; --ink:#e8f0ea; --muted:#9bb0a2; --line:#2b4034;
+  --pine:#7fc29b; --berry:#e0525a; --berry-ink:#1a0a0b; --gold:#e0b84e; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:400 17px/1.5 var(--font-body);min-height:100%;padding:24px 16px 56px}
+main{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1{font:800 clamp(2rem,7vw,3rem)/1.05 var(--font-display);margin:0;color:var(--pine);text-wrap:balance}
+h2{font:600 1.35rem/1.2 var(--font-display);margin:0 0 4px;text-wrap:balance}
+p{margin:0}
+.lead{color:var(--muted);max-width:60ch}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px}
+label{font-weight:700;font-size:.95rem}
+.hint{color:var(--muted);font-size:.9rem}
+textarea,input,select{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px}
+textarea{resize:vertical;min-height:120px}
+textarea.small{min-height:76px}
+input,select{min-height:48px}
+button{font:700 1rem var(--font-body);border-radius:10px;border:1px solid var(--line);background:var(--paper);color:var(--ink);padding:12px 16px;cursor:pointer;min-height:48px}
+button:hover{border-color:var(--pine)}
+button:focus-visible,textarea:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+button.primary{background:var(--berry);border-color:var(--berry);color:var(--berry-ink)}
+button.primary:hover{filter:brightness(1.08)}
+.err{color:var(--berry);font-weight:700;min-height:1.4em}
+.row{display:flex;flex-wrap:wrap;gap:10px}
+.hidden{display:none}
+.reveal{border:2px dashed var(--line);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px}
+.reveal .nation{font:800 clamp(1.8rem,8vw,2.6rem)/1.1 var(--font-display);color:var(--berry)}
+.k{font-size:.8rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){button{transition:filter .15s,border-color .15s}}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Pesca la nazione</h1>
+    <p class="lead">Ogni partecipante pesca la propria nazione dal proprio dispositivo. Nessuno, organizzatore compreso, vede quella degli altri. Nessuna nazione può uscire a due persone.</p>
+  </header>
+
+  <section class="card" aria-labelledby="h-org">
+    <h2 id="h-org">1. Organizzatore: crea il codice</h2>
+    <div>
+      <label for="names">Un nome per riga (minimo 3)</label>
+      <textarea id="names" placeholder="Anna&#10;Marco&#10;Giulia&#10;Nonna Rosa"></textarea>
+    </div>
+    <div>
+      <label for="cexcl">Nazioni da non assegnare a una persona (facoltativo)</label>
+      <p class="hint">Una riga per persona, nel formato Anna: Giappone, Stati Uniti. Nomi italiani delle nazioni.</p>
+      <textarea id="cexcl" class="small" placeholder="Anna: Giappone, Stati Uniti&#10;Marco: Brasile"></textarea>
+    </div>
+    <p id="oerr" class="err" role="alert"></p>
+    <button id="mk" class="primary" type="button">Crea codice</button>
+    <div id="outwrap" class="hidden">
+      <label for="out">Codice da inviare a tutti i partecipanti</label>
+      <textarea id="out" class="small" readonly></textarea>
+      <div class="row" style="margin-top:10px"><button id="cp" type="button">Copia codice</button></div>
+      <p class="hint" style="margin-top:8px">Il codice contiene solo nomi ed esclusioni. Non rivela nessuna estrazione.</p>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="h-p">
+    <h2 id="h-p">2. Partecipante: scopri la tua nazione</h2>
+    <div>
+      <label for="code">Incolla il codice ricevuto</label>
+      <textarea id="code" class="small"></textarea>
+    </div>
+    <button id="load" type="button">Carica</button>
+    <div id="pbox" class="hidden" style="display:none;flex-direction:column;gap:14px">
+      <div>
+        <label for="me">Il tuo nome</label>
+        <select id="me"></select>
+      </div>
+      <div>
+        <label for="pw">La tua parola segreta</label>
+        <p class="hint">Scegline una e non dirla a nessuno. Con la stessa parola ottieni sempre la stessa nazione, su qualsiasi dispositivo. Se la cambi, cambia anche il risultato.</p>
+        <input id="pw" type="text" autocomplete="off" autocapitalize="none" spellcheck="false">
+      </div>
+      <button id="draw" class="primary" type="button">Scopri la mia nazione</button>
+    </div>
+    <p id="perr" class="err" role="alert"></p>
+    <div id="rev" class="reveal hidden" aria-live="polite">
+      <p class="k" id="rev-for"></p>
+      <p class="k">Nazione estratta</p>
+      <p class="nation" id="rev-nation"></p>
+      <div class="row"><button id="hide" type="button">Nascondi</button></div>
+    </div>
+  </section>
+</main>
+
+<script>
+const COUNTRIES = ["Afghanistan","Albania","Algeria","Andorra","Angola","Antigua e Barbuda","Arabia Saudita","Argentina","Armenia","Australia","Austria","Azerbaigian","Bahamas","Bahrein","Bangladesh","Barbados","Belgio","Belize","Benin","Bhutan","Bielorussia","Bolivia","Bosnia ed Erzegovina","Botswana","Brasile","Brunei","Bulgaria","Burkina Faso","Burundi","Cambogia","Camerun","Canada","Capo Verde","Ciad","Cile","Cina","Cipro","Colombia","Comore","Corea del Nord","Corea del Sud","Costa d'Avorio","Costa Rica","Croazia","Cuba","Danimarca","Dominica","Ecuador","Egitto","El Salvador","Emirati Arabi Uniti","Eritrea","Estonia","Eswatini","Etiopia","Figi","Filippine","Finlandia","Francia","Gabon","Gambia","Georgia","Germania","Ghana","Giamaica","Giappone","Gibuti","Giordania","Grecia","Grenada","Guatemala","Guinea","Guinea-Bissau","Guinea Equatoriale","Guyana","Haiti","Honduras","India","Indonesia","Iran","Iraq","Irlanda","Islanda","Isole Marshall","Isole Salomone","Israele","Italia","Kazakistan","Kenya","Kirghizistan","Kiribati","Kuwait","Laos","Lesotho","Lettonia","Libano","Liberia","Libia","Liechtenstein","Lituania","Lussemburgo","Macedonia del Nord","Madagascar","Malawi","Maldive","Malesia","Mali","Malta","Marocco","Mauritania","Mauritius","Messico","Micronesia","Moldavia","Monaco","Mongolia","Montenegro","Mozambico","Myanmar","Namibia","Nauru","Nepal","Nicaragua","Niger","Nigeria","Norvegia","Nuova Zelanda","Oman","Paesi Bassi","Pakistan","Palau","Panama","Papua Nuova Guinea","Paraguay","Perù","Polonia","Portogallo","Qatar","Regno Unito","Repubblica Ceca","Repubblica Centrafricana","Repubblica del Congo","Repubblica Democratica del Congo","Repubblica Dominicana","Romania","Ruanda","Russia","Saint Kitts e Nevis","Saint Lucia","Saint Vincent e Grenadine","Samoa","San Marino","São Tomé e Príncipe","Senegal","Serbia","Seychelles","Sierra Leone","Singapore","Siria","Slovacchia","Slovenia","Somalia","Spagna","Sri Lanka","Stati Uniti","Sudafrica","Sudan","Sudan del Sud","Suriname","Svezia","Svizzera","Tagikistan","Tailandia","Tanzania","Timor Est","Togo","Tonga","Trinidad e Tobago","Tunisia","Turchia","Turkmenistan","Tuvalu","Ucraina","Uganda","Ungheria","Uruguay","Uzbekistan","Vanuatu","Venezuela","Vietnam","Yemen","Zambia","Zimbabwe"];
+const $ = id => document.getElementById(id);
+const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+const cmap = new Map(COUNTRIES.map(c => [norm(c), c]));
+
+function hash(str){ // cyrb53
+  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+  for (let i = 0; i < str.length; i++){
+    const ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761); h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return 4294967296 * (2097151 & h2) + (h1 >>> 0);
+}
+function mulberry(seed){
+  let a = seed >>> 0;
+  return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+function seededShuffle(arr, seedStr){
+  const r = mulberry(hash(seedStr) % 4294967296), a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+function encode(obj){ return 'SS1:' + btoa(unescape(encodeURIComponent(JSON.stringify(obj)))); }
+function decode(s){
+  s = s.trim(); if (!s.startsWith('SS1:')) throw 0;
+  const o = JSON.parse(decodeURIComponent(escape(atob(s.slice(4)))));
+  if (!Array.isArray(o.n) || o.n.length < 3 || typeof o.x !== 'object') throw 0;
+  return o;
+}
+// blocchi disgiunti: la nazione k del mazzo mescolato va alla persona k mod N
+function blockFor(cfg, i){
+  const deck = seededShuffle(COUNTRIES, cfg.n.join('|') + '#' + JSON.stringify(cfg.x));
+  const ex = new Set(cfg.x[cfg.n[i]] || []);
+  return deck.filter((_, k) => k % cfg.n.length === i).filter(c => !ex.has(c));
+}
+function pick(cfg, i, secret){
+  const b = blockFor(cfg, i);
+  return b[hash(cfg.n.join('|') + '#' + cfg.n[i] + '#' + norm(secret)) % b.length];
+}
+
+$('mk').addEventListener('click', () => {
+  const err = $('oerr'); err.textContent = ''; $('outwrap').classList.add('hidden');
+  const names = $('names').value.split('\n').map(s => s.trim()).filter(Boolean);
+  if (names.length < 3){ err.textContent = 'Servono almeno 3 partecipanti.'; return; }
+  const low = names.map(n => n.toLowerCase());
+  if (new Set(low).size !== names.length){ err.textContent = 'Ci sono nomi duplicati. Aggiungi un cognome o un’iniziale.'; return; }
+  const x = {};
+  for (const ln of $('cexcl').value.split('\n').map(s => s.trim()).filter(Boolean)){
+    const k = ln.indexOf(':');
+    if (k < 0){ err.textContent = 'Riga non valida: "' + ln + '". Usa il formato Anna: Giappone, Cina.'; return; }
+    const p = low.indexOf(ln.slice(0, k).trim().toLowerCase());
+    if (p < 0){ err.textContent = 'Nome non presente nell’elenco: "' + ln.slice(0, k).trim() + '".'; return; }
+    for (const raw of ln.slice(k + 1).split(',')){
+      if (!raw.trim()) continue;
+      const c = cmap.get(norm(raw));
+      if (!c){ err.textContent = 'Nazione non riconosciuta: "' + raw.trim() + '". Usa il nome italiano, ad esempio Stati Uniti.'; return; }
+      (x[names[p]] = x[names[p]] || []);
+      if (!x[names[p]].includes(c)) x[names[p]].push(c);
+    }
+  }
+  const cfg = { n: names, x };
+  for (let i = 0; i < names.length; i++){
+    if (!blockFor(cfg, i).length){ err.textContent = 'Le esclusioni lasciano ' + names[i] + ' senza nazioni disponibili.'; return; }
+  }
+  $('out').value = encode(cfg); $('outwrap').classList.remove('hidden');
+});
+$('cp').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText($('out').value); $('cp').textContent = 'Copiato'; setTimeout(() => $('cp').textContent = 'Copia codice', 1500); }
+  catch(e){ $('out').focus(); $('out').select(); }
+});
+
+let cfg = null;
+$('load').addEventListener('click', () => {
+  const err = $('perr'); err.textContent = ''; hideRev();
+  try { cfg = decode($('code').value); }
+  catch(e){ cfg = null; $('pbox').style.display = 'none'; err.textContent = 'Codice non valido. Incollalo per intero, a partire da SS1:.'; return; }
+  const sel = $('me'); sel.replaceChildren();
+  cfg.n.forEach((n, i) => { const o = document.createElement('option'); o.value = i; o.textContent = n; sel.appendChild(o); });
+  $('pbox').style.display = 'flex';
+});
+$('draw').addEventListener('click', () => {
+  const err = $('perr'); err.textContent = '';
+  const pw = $('pw').value;
+  if (norm(pw).length < 3){ err.textContent = 'La parola segreta deve avere almeno 3 caratteri.'; return; }
+  const i = +$('me').value;
+  $('rev-for').textContent = 'Per ' + cfg.n[i];
+  $('rev-nation').textContent = pick(cfg, i, pw);
+  $('rev').classList.remove('hidden');
+});
+function hideRev(){ $('rev').classList.add('hidden'); $('rev-nation').textContent = ''; $('rev-for').textContent = ''; }
+$('hide').addEventListener('click', () => { hideRev(); $('pw').value = ''; });
+</script>
+</body>
+</html>
