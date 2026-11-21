@@ -55,7 +55,7 @@ button.primary:hover{filter:brightness(1.08)}
 <main>
   <header>
     <h1>Organizzatore</h1>
-    <p class="lead">Crea un codice personale per ogni partecipante. Ogni codice contiene solo il nome e un gruppo di nazioni candidate. Le nazioni non sono mostrate qui e non vengono salvate da nessuna parte.</p>
+    <p class="lead">Crea un codice personale per ogni partecipante. L’estrazione avviene una sola volta, ora: ogni codice contiene già il risultato di quella persona. Le nazioni non sono mostrate qui e non vengono salvate da nessuna parte.</p>
   </header>
 
   <section class="card">
@@ -73,7 +73,7 @@ button.primary:hover{filter:brightness(1.08)}
 
     <div id="outwrap" class="hidden">
       <p class="k">Un codice per persona</p>
-      <p class="hint" style="margin:4px 0 10px">Invia a ciascuno solo il proprio codice, in privato. Se ricrei i codici, quelli vecchi non vanno più usati.</p>
+      <p class="hint" style="margin:4px 0 10px">Invia a ciascuno solo il proprio codice, in privato. Crea i codici una volta sola: ogni nuova creazione è una nuova estrazione e rende non validi i codici precedenti.</p>
       <div id="codes" class="sendlist"></div>
       <textarea id="fallback" class="small hidden" readonly aria-label="Codice da copiare"></textarea>
     </div>
@@ -92,12 +92,22 @@ function rnd(n){
   return a[0] % n;
 }
 function shuffle(arr){ for (let i = arr.length - 1; i > 0; i--){ const j = rnd(i + 1); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
+function hash(str){ // cyrb53
+  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+  for (let i = 0; i < str.length; i++){
+    const ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761); h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return 4294967296 * (2097151 & h2) + (h1 >>> 0);
+}
 function check(body){ let h = 0; for (const v of body) h = (h * 31 + v + 1) % 65521; return h; }
-function encode(name, block){
+function encode(name, idx){
   const nb = new TextEncoder().encode(name);
-  const body = [nb.length, ...nb, block.length, ...block];
+  const body = [nb.length, ...nb, idx ^ (hash(name) & 255)];
   const c = check(body), all = [...body, c >> 8, c & 255];
-  return 'SS2-' + btoa(String.fromCharCode(...all)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return 'SS3-' + btoa(String.fromCharCode(...all)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 $('mk').addEventListener('click', () => {
@@ -121,12 +131,15 @@ $('mk').addEventListener('click', () => {
       ban[p].add(c);
     }
   }
-  const deck = shuffle(COUNTRIES.map((_, i) => i));
   const N = names.length, list = $('codes'); list.replaceChildren();
+  const used = new Set(), codes = [];
   for (let i = 0; i < N; i++){
-    const block = deck.filter((_, k) => k % N === i && !ban[i].has(deck[k]));
-    if (!block.length){ err.textContent = 'Le esclusioni lasciano ' + names[i] + ' senza nazioni disponibili.'; list.replaceChildren(); return; }
-    const code = encode(names[i], block);
+    const ok = COUNTRIES.map((_, c) => c).filter(c => !used.has(c) && !ban[i].has(c));
+    if (!ok.length){ err.textContent = 'Le esclusioni lasciano ' + names[i] + ' senza nazioni disponibili.'; return; }
+    const c = ok[rnd(ok.length)]; used.add(c); codes.push(encode(names[i], c));
+  }
+  for (let i = 0; i < N; i++){
+    const code = codes[i];
     const row = document.createElement('div'); row.className = 'send';
     const s = document.createElement('span'); s.textContent = names[i];
     const b = document.createElement('button'); b.type = 'button'; b.textContent = 'Copia codice';

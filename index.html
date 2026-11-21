@@ -57,30 +57,16 @@ button.primary:hover{filter:brightness(1.08)}
 <main>
   <header>
     <h1>Pesca la nazione</h1>
-    <p class="lead">Incolla il codice personale che hai ricevuto, scegli una parola segreta e scopri la tua nazione. Nessuno la vede, nemmeno chi organizza.</p>
+    <p class="lead">Incolla il codice personale che hai ricevuto e scopri la tua nazione. Il risultato è fisso: lo stesso codice dà sempre la stessa nazione, su qualsiasi dispositivo.</p>
   </header>
 
   <section class="card">
     <div>
       <label for="code">Il tuo codice</label>
-      <textarea id="code" autocomplete="off" spellcheck="false" placeholder="SS2-..."></textarea>
+      <textarea id="code" autocomplete="off" spellcheck="false" placeholder="SS3-..."></textarea>
     </div>
-    <button id="load" type="button">Carica</button>
+    <button id="draw" class="primary" type="button">Scopri la mia nazione</button>
     <p id="perr" class="err" role="alert"></p>
-
-    <div id="pbox" class="hidden" style="display:none;flex-direction:column;gap:14px">
-      <div>
-        <p class="k">Codice di</p>
-        <p class="who" id="who"></p>
-        <p class="hint">Se non è il tuo nome, non proseguire e chiedi il codice giusto a chi organizza.</p>
-      </div>
-      <div>
-        <label for="pw">La tua parola segreta</label>
-        <p class="hint">Scegline una e non dirla a nessuno. Con la stessa parola ottieni sempre la stessa nazione, su qualsiasi dispositivo. Se la cambi, cambia anche il risultato.</p>
-        <input id="pw" type="text" autocomplete="off" autocapitalize="none" spellcheck="false">
-      </div>
-      <button id="draw" class="primary" type="button">Scopri la mia nazione</button>
-    </div>
 
     <div id="rev" class="reveal hidden" aria-live="polite">
       <p class="k" id="rev-for"></p>
@@ -109,40 +95,31 @@ function hash(str){ // cyrb53
 function check(body){ let h = 0; for (const v of body) h = (h * 31 + v + 1) % 65521; return h; }
 function decode(s){
   s = s.replace(/\s+/g, '');
-  if (!s.startsWith('SS2-')) throw 0;
+  if (!s.startsWith('SS3-')) throw 0;
   let b = s.slice(4).replace(/-/g, '+').replace(/_/g, '/');
   while (b.length % 4) b += '=';
   const u = Uint8Array.from(atob(b), c => c.charCodeAt(0));
-  if (u.length < 6) throw 0;
+  if (u.length < 5) throw 0;
   const body = u.slice(0, u.length - 2), chk = (u[u.length - 2] << 8) | u[u.length - 1];
   if (check(body) !== chk) throw 0;
-  const nl = body[0], bl = body[1 + nl];
-  if (!nl || !bl || body.length !== 2 + nl + bl) throw 0;
+  const nl = body[0];
+  if (!nl || body.length !== nl + 2) throw 0;
   const name = new TextDecoder().decode(body.slice(1, 1 + nl));
-  const block = Array.from(body.slice(2 + nl));
-  if (block.some(v => v >= COUNTRIES.length)) throw 0;
-  return { name, block };
+  const idx = body[1 + nl] ^ (hash(name) & 255);
+  if (idx >= COUNTRIES.length) throw 0;
+  return { name, country: COUNTRIES[idx] };
 }
-function pick(c, secret){ return COUNTRIES[c.block[hash(c.name + '#' + norm(secret)) % c.block.length]]; }
-
-let cfg = null;
 function hideRev(){ $('rev').classList.add('hidden'); $('rev-nation').textContent = ''; $('rev-for').textContent = ''; }
-$('load').addEventListener('click', () => {
-  const err = $('perr'); err.textContent = ''; hideRev();
-  try { cfg = decode($('code').value); }
-  catch(e){ cfg = null; $('pbox').style.display = 'none'; err.textContent = 'Codice non valido. Incollalo per intero, a partire da SS2-.'; return; }
-  $('who').textContent = cfg.name;
-  $('pbox').style.display = 'flex';
-});
 $('draw').addEventListener('click', () => {
-  const err = $('perr'); err.textContent = '';
-  const pw = $('pw').value;
-  if (norm(pw).length < 3){ err.textContent = 'La parola segreta deve avere almeno 3 caratteri.'; return; }
-  $('rev-for').textContent = 'Per ' + cfg.name;
-  $('rev-nation').textContent = pick(cfg, pw);
+  const err = $('perr'); err.textContent = ''; hideRev();
+  let c;
+  try { c = decode($('code').value); }
+  catch(e){ err.textContent = 'Codice non valido. Incollalo per intero, a partire da SS3-.'; return; }
+  $('rev-for').textContent = 'Per ' + c.name;
+  $('rev-nation').textContent = c.country;
   $('rev').classList.remove('hidden');
 });
-$('hide').addEventListener('click', () => { hideRev(); $('pw').value = ''; });
+$('hide').addEventListener('click', hideRev);
 </script>
 </body>
 </html>
